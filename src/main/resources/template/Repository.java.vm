@@ -1,0 +1,15 @@
+package ${package}.${moduleName}.repository;
+
+import ${package}.${moduleName}.entity.${className};
+import org.springframework.data.jpa.repository.JpaRepository;
+/**
+ * ${comments}
+ * 
+ * @author ${author}
+ * @email ${email}
+ * @date ${datetime}
+ */
+
+public interface ${className}Repository extends JpaRepository<${className},${pk.attrType}> {
+	
+}
