@@ -31,24 +31,59 @@ public class GenUtils {
     public static List<String> getTemplates(){
         List<String> templates = new ArrayList<String>();
         templates.add("template/Entity.java.vm");
-//        templates.add("template/Dao.java.vm");
-//        templates.add("template/Dao.xml.vm");
         templates.add("template/Service.java.vm");
-//        templates.add("template/ServiceImpl.java.vm");
         templates.add("template/Controller.java.vm");
         templates.add("template/Repository.java.vm");
-//        templates.add("template/menu.sql.vm");
-
-//        templates.add("template/adminlte/list.html.vm");
-//        templates.add("template/adminlte/list.js.vm");
-//
-//        templates.add("template/elementui/index.vue.vm");
-//        templates.add("template/elementui/add-or-update.vue.vm");
-//        templates.add("template/elementui/index.js.vm");
-
         return templates;
     }
+    // Util模板
+    public static List<String> getUtilTemplates(){
+        List<String> templates = new ArrayList<>();
+        templates.add("template/swaggerConfig.java.vm");
+        templates.add("template/application.yml.vm");
+        return templates;
+    }
+    // 生成基础类和配置文件
+    public static void generatorUtil(ZipOutputStream zip){
+        Configuration config = getConfig();
+        //设置velocity资源加载器
+        Properties prop = new Properties();
+        prop.put("file.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader" );
+        Velocity.init(prop);
+        String mainPath = config.getString("mainPath" );
+        mainPath = StringUtils.isBlank(mainPath) ? "com.octopus" : mainPath;
+        //封装模板数据
+        Map<String, Object> map = new HashMap<>();
+        map.put("mainPath", mainPath);
+        map.put("package", config.getString("package" ));
+        map.put("moduleName", config.getString("moduleName" ));
+        map.put("author", config.getString("author" ));
+        map.put("email", config.getString("email" ));
+        map.put("datetime", DateUtils.format(new Date(), DateUtils.DATE_TIME_PATTERN));
+        map.put("jdbcurl",config.getString("jdbcurl"));
+        map.put("username",config.getString("username"));
+        map.put("password",config.getString("password"));
+        VelocityContext context = new VelocityContext(map);
 
+        //获取模板列表
+        List<String> templates = getUtilTemplates();
+        for (String template : templates) {
+            //渲染模板
+            StringWriter sw = new StringWriter();
+            Template tpl = Velocity.getTemplate(template, "UTF-8" );
+            tpl.merge(context, sw);
+
+            try {
+                //添加到zip
+                zip.putNextEntry(new ZipEntry(getFileName(template, "", config.getString("package" ), config.getString("moduleName" ))));
+                IOUtils.write(sw.toString(), zip, "UTF-8" );
+                IOUtils.closeQuietly(sw);
+                zip.closeEntry();
+            } catch (IOException e) {
+                throw new RRException("渲染模板失败，模板名："+template, e);
+            }
+        }
+    }
     /**
      * 生成代码
      */
@@ -178,6 +213,7 @@ public class GenUtils {
      */
     public static String getFileName(String template, String className, String packageName, String moduleName) {
         String packagePath = "main" + File.separator + "java" + File.separator;
+        String resourcePath = "main" + File.separator + "resources" + File.separator;
         if (StringUtils.isNotBlank(packageName)) {
             packagePath += packageName.replace(".", File.separator) + File.separator + moduleName + File.separator;
         }
@@ -195,6 +231,12 @@ public class GenUtils {
         }
         if (template.contains("Repository.java.vm" )) {
             return packagePath + "repository" + File.separator + className + "Repository.java";
+        }
+        if (template.contains("swaggerConfig.java.vm" )) {
+            return packagePath + "config" + File.separator + "swaggerConfig.java";
+        }
+        if (template.contains("application.yml.vm" )) {
+            return resourcePath+"application.yml";
         }
         return null;
     }
